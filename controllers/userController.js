@@ -1,6 +1,7 @@
 // controllers/userController.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const asyncHandler = require('express-async-handler');
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -51,4 +52,38 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser };
+
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private
+const getUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('-password');
+  if (user) {
+    res.json(user);
+  } else {
+    res.status(404).json({ message: 'User not found' });
+  }
+});
+
+// @desc    Update user profile (name, email)
+// @route   PUT /api/users/profile
+// @access  Private
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+
+  user.name = req.body.name || user.name;
+  user.email = req.body.email || user.email;
+
+  const updatedUser = await user.save();
+  res.json({
+    _id: updatedUser._id,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    plan: updatedUser.plan,
+    token: req.token,
+  });
+});
+
+module.exports = { registerUser, loginUser, getUserProfile, updateUserProfile };
+
